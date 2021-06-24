@@ -1,32 +1,167 @@
-name: On Workflow Complete
-on:
-  workflow_run:
-    workflows:
-      - '**'
-    types: 
-      - completed
+name: test-foo-bar-stg-prd-cicd
 
-env:
-  PROJECT_NAME: ph-fe-agents-enroll
-  
+on:
+  push:
+    branches: [ foo ]
+
+  workflow_dispatch:
+    branches: [ bar ]
+
+
 jobs:
-  submit-usage-metrics:
+  build:
     runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Context Short Names
+        id: short-names
+        run: |
+          echo "::set-output name=branch::$(echo ${{github.ref}} | cut -d/ -f 3)"
+          echo "::set-output name=repository::$(echo ${{github.repository}} | cut -d/ -f2)"
+
+      - name: Build Step
+        shell: bash
+        env:
+          MYGET_ACCESS_TOKEN: ${{ secrets.MYGET_AUTH_TOKEN }}
+          MYGET_USER_NAME: healthcareadmin
+        run: |
+          $GITHUB_WORKSPACE/gradlew build
+          7z a $ARTIFACT_FILE_NAME build/libs/*.jar Dockerfile
+
+      - name: Datadog Build Metric
+        if: ${{ success() || failure() }}
+        env:
+          STATUS: ${{ fromJSON('["fail", "success"]')[job.status == 'success'] }}
+        uses: masci/datadog@v1
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          metrics: |
+            - type: "count"
+              name: "github.actions.build.${{ env.STATUS }}"
+              value: 1.0
+              host: ${{ github.repository_owner }}
+              tags:
+                - "project:${{ env.PROJECT_NAME }}"
+                - "repository:${{ steps.short-names.outputs.repository }}"
+                - "branch:${{ steps.short-names.outputs.branch }}"
+                - "actor:${{ github.actor }}"
+                - "repository_owner:${{github.repository_owner}}"
+                - "env:${{ env.ENV }}"
+  deploy-stg:
+    runs-on: ubuntu-latest
+    env:
+      ENV: stg
+      AWS_ECS_TASK_DEFINITION_FAMILY: ph-stg-pivot-health-service-task-def
+      AWS_ECS_TASK_DEFINITION_CONTAINER_NAME: ph-stg-pivot-health-service-container
+      AWS_ECS_SERVICE: ph-stg-pivot-health-backend-service
+      AWS_ECS_CLUSTER: ph-stg-services-cluster
+      AQA_EXECUTE_TEST_SUITE: SmokePayment
+      AQA_EXECUTE_TEST_SUITE_GROUP: pivot-health-smokepayment-selenium
+      AQA_EXECUTE_TEST_SUITE_ENV: stg
+      AQA_SLACK_CHANNEL_TO_NOTIFY: '#aqa-pivot'
+    needs: build
     steps:
       - uses: actions/setup-python@v2
         with:
           python-version: '3.7'
+
+      - name: Context Short Names
+        id: short-names
+        run: |
+          echo "::set-output name=branch::$(echo ${{github.ref}} | cut -d/ -f 3)"
+          echo "::set-output name=repository::$(echo ${{github.repository}} | cut -d/ -f2)"
       - uses: actions/checkout@v2
         with:
           repository: healthcarecom/platform-github-actions
           token: ${{ secrets.CICD_GITHUB_TOKEN }}
           path: .github/actions
-      - name: Workflow Run Usage Metrics Action
-        uses: ./.github/actions/workflow-run-usage-metrics-action
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v2
         with:
-          project-name: ${{ env.PROJECT_NAME }}
-          datadog-api-key: ${{ secrets.DATADOG_API_KEY }}
-          github-cicd-token: ${{ secrets.CICD_GITHUB_TOKEN }}
-          completed-workflow-branch: ${{ github.event.workflow_run.head_branch }}
-          completed-workflow-run-id: ${{ github.event.workflow_run.id }}
-          completed-workflow-run-conclusion: ${{ github.event.workflow_run.conclusion }}
+          name: ${{ env.ARTIFACT_NAME }}
+
+      - name: Extract Artifact
+        run: 7z e $ARTIFACT_FILE_NAME
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+
+      - name: Datadog Release Metric
+        if: ${{ success() || failure() }}
+        env:
+          STATUS: ${{ fromJSON('["fail", "success"]')[job.status == 'success'] }}
+        uses: masci/datadog@v1
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          metrics: |
+            - type: "count"
+              name: "github.actions.release.${{ env.STATUS }}"
+              value: 1.0
+              host: ${{ github.repository_owner }}
+              tags:
+                - "project:${{ env.PROJECT_NAME }}"
+                - "repository:${{ steps.short-names.outputs.repository }}"
+                - "branch:${{ steps.short-names.outputs.branch }}"
+                - "actor:${{ github.actor }}"
+                - "repository_owner:${{github.repository_owner}}"
+                - "env:${{ env.ENV }}"
+  
+  promote-prod:
+    runs-on: ubuntu-latest
+    env:
+      ENV: prd
+      AWS_ECS_TASK_DEFINITION_FAMILY: ph-prd-pivot-health-service-task-def
+      AWS_ECS_TASK_DEFINITION_CONTAINER_NAME: ph-prd-pivot-health-service-container
+      AWS_ECS_SERVICE: ph-prd-pivot-health-backend-service
+      AWS_ECS_CLUSTER: ph-prd-services-cluster
+
+    environment: prd
+    concurrency: 
+      group: prd
+      cancel-in-progress: true
+    
+    needs: deploy-stg
+    steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+
+      - name: Context Short Names
+        id: short-names
+        run: |
+          echo "::set-output name=branch::$(echo ${{github.ref}} | cut -d/ -f 3)"
+          echo "::set-output name=repository::$(echo ${{github.repository}} | cut -d/ -f2)"
+
+      - name: Datadog Release Metric
+        if: ${{ success() || failure() }}
+        env:
+          STATUS: ${{ fromJSON('["fail", "success"]')[job.status == 'success'] }}
+        uses: masci/datadog@v1
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          metrics: |
+            - type: "count"
+              name: "github.actions.release.${{ env.STATUS }}"
+              value: 1.0
+              host: ${{ github.repository_owner }}
+              tags:
+                - "project:${{ env.PROJECT_NAME }}"
+                - "repository:${{ steps.short-names.outputs.repository }}"
+                - "branch:${{ steps.short-names.outputs.branch }}"
+                - "actor:${{ github.actor }}"
+                - "repository_owner:${{github.repository_owner}}"
+                - "env:${{ env.ENV }}"
+
+  
