@@ -1,5 +1,4 @@
 name: test-foo-bar-stg-prd-cicd
-
 on:
   push:
     branches: [ foo ]
