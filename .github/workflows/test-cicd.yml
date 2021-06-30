@@ -101,7 +101,7 @@ jobs:
           STATUS: ${{ fromJSON('["fail", "success"]')[job.status == 'success'] }}
         uses: masci/datadog@v1
         with:
-          api-key: ${{ secrets.DATADOG_API_KE }} 
+          api-key: ${{ secrets.DATADOG_API_KEY }} 
           metrics: |
             - type: "count"
               name: "github.actions.release.${{ env.STATUS }}"
