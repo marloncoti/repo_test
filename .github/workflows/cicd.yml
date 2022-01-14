@@ -1,0 +1,15 @@
+name: infrastructure-deploy
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  event-details:
+    runs-on: ubuntu-latest
+    steps:
+      - name: my-step
+        env:
+         - EVENT_CONTEXT: ${{ toJSON(github.event) }}
+        run: |
+          echo $EVENT_CONTEXT
