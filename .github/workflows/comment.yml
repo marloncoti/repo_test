@@ -1,0 +1,17 @@
+name: comment-cicd
+on:
+  pull_request_review_comment:
+    types: [ created ]
+  issue_comment:
+    types: [ created ]
+
+
+jobs:
+  event-details:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          EVENT_CONTEXT: ${{ github.event.comment.body }}
+        run: |
+          echo $EVENT_CONTEXT
