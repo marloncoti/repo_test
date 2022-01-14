@@ -1,0 +1,17 @@
+name: infrastructure-deploy
+on:
+  pull_request:
+    branches:
+      - master
+    types: [ closed ]
+
+jobs:
+  event-details:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          EVENT_CONTEXT: ${{ toJSON(github.event) }}
+        run: |
+          echo PR #${{ github.event.number }} has been merged
+          echo $EVENT_CONTEXT
