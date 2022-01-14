@@ -1,4 +1,4 @@
-name: infrastructure-deploy
+name: infrastructure-preview
 on:
   pull_request:
     branches:
