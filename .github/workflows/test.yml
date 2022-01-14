@@ -1,6 +1,6 @@
 name: infrastructure-deploy
 on:
-  push:
+  pull_request:
     branches:
       - master
 
