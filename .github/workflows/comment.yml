@@ -8,14 +8,14 @@ jobs:
     if: ${{ github.event.issue.pull_request }}
     runs-on: ubuntu-latest
     steps:
-          
+
       - name: GET_PR_URL
         uses: octokit/request-action@v2.x
         id: get_pr_url
         with:
           route: GET ${{ github.event.issue.pull_request.url }}
         env:
-          GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN  }}
+          GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
 
       - name: branch
         id: bracncl
@@ -23,3 +23,9 @@ jobs:
           BRANCH: ${{ fromJson(steps.get_pr_url.outputs.data).head.ref }}
         run: | 
           echo "$BRANCH"
+
+      - name: comment_print
+        env:
+          COMMENT: ${{ github.event.issue.body }}
+        run: |
+          echo "$COMMENT"
