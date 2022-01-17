@@ -10,6 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - env:
-          EVENT_CONTEXT: ${{ toJSON(github.event) }}
+          PR_URL: ${{ github.event.issue.url }}
         run: |
-          echo $EVENT_CONTEXT
+          echo $PR_URL
+      
+      - name: GET_PR_URL
+        uses: octokit/request-action@v2.x
+        id: get_pr_url
+        with:
+          route: GET ${{ github.event.issue.url }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN  }}
+
+      - name: branch
+        id: bracncl
+        env: 
+          BRANCH: ${{ fromJson (steps.get_pr_url.outputs.data)[0].head.ref }}
+        run: | 
+          echo "$BRANCH"
