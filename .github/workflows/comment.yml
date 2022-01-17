@@ -12,7 +12,6 @@ jobs:
           EVENT_CONTEXT: ${{ toJSON(github.event) }}
         run: |
           echo $EVENT_CONTEXT 
-          s
       - name: GET_PR_URL
         uses: octokit/request-action@v2.x
         id: get_pr_url
@@ -30,6 +29,6 @@ jobs:
 
       - name: comment_print
         env:
-          COMMENT: ${{ github.event.issue.body }}
+          COMMENT: ${{ github.event.comment.body }}
         run: |
           echo "$COMMENT"
