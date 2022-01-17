@@ -25,6 +25,6 @@ jobs:
       - name: branch
         id: bracncl
         env: 
-          BRANCH: ${{ fromJson (steps.get_pr_url.outputs.data)[0].head.ref }}
+          BRANCH: ${{ fromJson (steps.get_pr_url.outputs.data.head.ref) }}
         run: | 
           echo "$BRANCH"
