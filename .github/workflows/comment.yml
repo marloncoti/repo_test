@@ -6,6 +6,7 @@ on:
 jobs:
   event-details:
     if: ${{ github.event.issue.pull_request }}
+    if: ${{ contains(github.event.comment.body, '[deploy-infra]') }}
     runs-on: ubuntu-latest
     steps:
       - env:
