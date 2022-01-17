@@ -18,7 +18,7 @@ jobs:
         uses: octokit/request-action@v2.x
         id: get_pr_url
         with:
-          route: GET ${{ github.event.issue.url }}
+          route: GET ${{ github.event.issue.pull_request.url }}
         env:
           GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN  }}
 
