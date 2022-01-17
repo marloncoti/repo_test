@@ -8,7 +8,11 @@ jobs:
     if: ${{ github.event.issue.pull_request }}
     runs-on: ubuntu-latest
     steps:
-
+      - env:
+          EVENT_CONTEXT: ${{ toJSON(github.event) }}
+        run: |
+          echo $EVENT_CONTEXT 
+          s
       - name: GET_PR_URL
         uses: octokit/request-action@v2.x
         id: get_pr_url
