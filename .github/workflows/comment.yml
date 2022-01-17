@@ -1,7 +1,5 @@
 name: comment-cicd
 on:
-  pull_request_review_comment:
-    types: [ created ]
   issue_comment:
     types: [created]
 
@@ -25,6 +23,6 @@ jobs:
       - name: branch
         id: bracncl
         env: 
-          BRANCH: ${{ fromJson (steps.get_pr_url.outputs.data) }}
+          BRANCH: ${{ fromJson(steps.create_check_run.outputs.data) }}
         run: | 
           echo "$BRANCH"
