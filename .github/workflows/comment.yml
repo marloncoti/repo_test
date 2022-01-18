@@ -41,6 +41,7 @@ jobs:
 
     
       - name: close-PR
+        if: ${{ success() || failure() }}
         env: 
           STATUS: ${{ fromJson(steps.merge-pr.outputs.data).merged }}
         run: | 
