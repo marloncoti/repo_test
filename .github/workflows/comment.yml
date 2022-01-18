@@ -22,12 +22,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
 
-      - name: branch
-        id: bracncl
-        env: 
-          BRANCH: ${{ fromJson(steps.get_pr_url.outputs.data).head.ref }}
-        run: | 
-          echo "$BRANCH"
+
 
       - name: comment_print
         env:
@@ -47,6 +42,6 @@ jobs:
     
       - name: close-PR
         env: 
-          STATUS: ${{ fromJson(steps.get_pr_url.outputs.data) }}
+          STATUS: ${{ steps.get_pr_url.outputs.data.merged }}
         run: | 
           echo "$STATUS"
