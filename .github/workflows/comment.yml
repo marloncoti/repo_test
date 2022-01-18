@@ -42,6 +42,6 @@ jobs:
     
       - name: close-PR
         env: 
-          STATUS: ${{ steps.get_pr_url.outputs.data.merged }}
+          STATUS: ${{ steps.merge-pr.outputs.data.merged }}
         run: | 
           echo "$STATUS"
