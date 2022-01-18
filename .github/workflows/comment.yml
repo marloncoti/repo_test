@@ -25,7 +25,7 @@ jobs:
       - name: branch
         id: bracncl
         env: 
-          BRANCH: ${{ fromJson(steps.get_pr_url.outputs }}
+          BRANCH: ${{ fromJson(steps.get_pr_url.outputs.data }}
         run: | 
           echo "$BRANCH"
 
@@ -47,6 +47,6 @@ jobs:
     
       - name: close-PR
         env: 
-          STATUS: ${{ fromJson(steps.get_pr_url.outputs }}
+          STATUS: ${{ fromJson(steps.get_pr_url.outputs.data }}
         run: | 
           echo "$STATUS"
