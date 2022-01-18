@@ -13,6 +13,7 @@ jobs:
           EVENT_CONTEXT: ${{ toJSON(github.event) }}
         run: |
           echo $EVENT_CONTEXT 
+     
       - name: GET_PR_URL
         uses: octokit/request-action@v2.x
         id: get_pr_url
@@ -24,7 +25,7 @@ jobs:
       - name: branch
         id: bracncl
         env: 
-          BRANCH: ${{ fromJson(steps.get_pr_url.outputs.data).head.ref }}
+          BRANCH: ${{ fromJson(steps.get_pr_url.outputs) }}
         run: | 
           echo "$BRANCH"
 
@@ -33,3 +34,22 @@ jobs:
           COMMENT: ${{ github.event.comment.body }}
         run: |
           echo "$COMMENT"
+      
+      - name: Merge PR
+        uses: octokit/request-action@v2.x
+        id: merge-pr
+        with:
+          route: PUT ${{ github.event.issue.pull_request.url }}/merge
+        env:
+          GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
+
+
+    
+      - name: close-PR
+        uses: octokit/request-action@v2.x
+        id: merge-pr
+        with:
+          route: PUT ${{ github.event.issue.pull_request.url }}/merge
+        env:
+          GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
+
