@@ -46,7 +46,6 @@ jobs:
 
     
       - name: close-PR
-        uses: octokit/request-action@v2.x
         env: 
           STATUS: ${{ fromJson(steps.get_pr_url.outputs }}
         run: | 
