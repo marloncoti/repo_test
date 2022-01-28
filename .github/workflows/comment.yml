@@ -8,27 +8,37 @@ env:
   PROJECT_NAME_PRETTY: Healthcare IaC State Repository
 
 jobs:
+  pull-request-info:
+  if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '[deploy-infra]') }}
+  runs-on: ubuntu-latest
+  outputs:
+    branch_name: ${{ fromJson(steps.get_pull_request_url.outputs.data).head.ref }} # pull request data 
+    number: ${{ fromJson(steps.get_pull_request_url.outputs.data).number }}
+    mergeable_state: ${{ fromJson(steps.get_pull_request_url.outputs.data).mergeable_state }}
+  
+  steps:
+    - name: Get PR URL from Comment
+      uses: octokit/request-action@v2.x
+      id: get_pull_request_url
+      with:
+        route: GET ${{ github.event.issue.pull_request.url }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
+  
   deploy-infra:
     name: deploy-infra
+    needs: get-pr-details
     if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '[deploy-infra]') }}
     runs-on: ubuntu-latest
     steps:
-    
       - uses: actions/setup-python@v2
         with:
           python-version: 3.7
 
-      - name: Get PR URL from Comment
-        uses: octokit/request-action@v2.x
-        id: get_pull_request_url
-        with:
-          route: GET ${{ github.event.issue.pull_request.url }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
-
       - uses: actions/checkout@v2
+        name: fetch code from pr branch
         with:
-          ref: ${{ fromJson(steps.get_pull_request_url.outputs.data).head.ref }}
+          ref: ${{ needs.pull-request-info.outputs.branch_name }}
 
       - name: Configure IAC Custom Action
         uses: actions/checkout@v2
@@ -48,8 +58,8 @@ jobs:
         id: iac-project-info
         uses: ./.github/actions/iac-get-project-info
         with:
-          github-branch: ${{ fromJson(steps.get_pull_request_url.outputs.data).head.ref }}
-          github-pull-request-number: ${{ fromJson(steps.get_pull_request_url.outputs.data).number }}
+          github-branch: ${{ needs.pull-request-info.outputs.branch_name }}
+          github-pull-request-number: ${{ needs.pull-request-info.outputs.number }}
           github-cicd-token: ${{ secrets.CICD_GITHUB_TOKEN }}
       
       - name: Display IaC Project to Automate
