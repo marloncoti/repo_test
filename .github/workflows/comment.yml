@@ -1,48 +1,95 @@
-name: comment-cicd
+name: infrastructure-deploy
 on:
   issue_comment:
-    types: [created]
+    types: [ created ]
+
+env:
+  PROJECT_NAME: hc-iac-state-repository
+  PROJECT_NAME_PRETTY: Healthcare IaC State Repository
 
 jobs:
-  event-details:
+  deploy-infra:
+    name: deploy-infra
     if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '[deploy-infra]') }}
-    
     runs-on: ubuntu-latest
     steps:
-      - env:
-          EVENT_CONTEXT: ${{ toJSON(github.event) }}
-        run: |
-          echo $EVENT_CONTEXT 
-     
-      - name: GET_PR_URL
+    
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      - name: Get PR URL from Comment
         uses: octokit/request-action@v2.x
-        id: get_pr_url
+        id: get_pull_request_url
         with:
           route: GET ${{ github.event.issue.pull_request.url }}
         env:
           GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
 
-
-
-      - name: comment_print
-        env:
-          COMMENT: ${{ github.event.comment.body }}
-        run: |
-          echo "$COMMENT"
-      
-      - name: Merge PR
-        uses: octokit/request-action@v2.x
-        id: merge-pr
+      - uses: actions/checkout@v2
         with:
-          route: PUT ${{ github.event.issue.pull_request.url }}/merge
+          ref: ${{ fromJson(steps.get_pull_request_url.outputs.data).head.ref }}
+
+      - name: Configure IAC Custom Action
+        uses: actions/checkout@v2
+        with:
+          repository: healthcarecom/platform-github-actions
+          token: ${{ secrets.CICD_GITHUB_TOKEN }}
+          path: .github/actions
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Get IaC Required Info
+        id: iac-project-info
+        uses: ./.github/actions/iac-get-project-info
+        with:
+          github-branch: ${{ fromJson(steps.get_pull_request_url.outputs.data).head.ref }}
+          github-pull-request-number: ${{ fromJson(steps.get_pull_request_url.outputs.data).number }}
+          github-cicd-token: ${{ secrets.CICD_GITHUB_TOKEN }}
+      
+      - name: Display IaC Project to Automate
+        run: |
+          echo "Project Path -  ${{ steps.iac-project-info.outputs.project }}"
+          echo "Environment to Preview/Deploy - ${{ steps.iac-project-info.outputs.environment }}"
+          
+      - name: Install Python Dependencies
         env:
-          GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
-
-
-    
-      - name: close-PR
-        if: ${{ success() || failure() }}
-        env: 
-          STATUS: ${{ fromJson(steps.merge-pr.outputs.header).status }}
+          PIP_EXTRA_INDEX_URL: https://${{secrets.MYGET_USER_NAME}}:${{secrets.MYGET_AUTH_TOKEN}}@myget.org/F/engineering-platform/python
+        working-directory: ${{ steps.iac-project-info.outputs.project }}
+        run: |
+         echo "pip install"
+      
+      - name: set Configuration Path
+        id: get-config-path
+        run: |
+          CONFIGURATION_PATH="$GITHUB_WORKSPACE/config"
+          echo $CONFIGURATION_PATH
+          echo "::set-output name=config_path::$CONFIGURATION_PATH"
+      
+      - name: add placeholder docker apps to pulumi project
+        working-directory: ${{ steps.iac-project-info.outputs.project }}
+        run: |
+          cp -R ${GITHUB_WORKSPACE}/placeholder-apps .
+          ls -la
+      
+      - name: Pulumi deploy Command
         run: | 
-          echo "$STATUS"
+          echo "pulumi up"
+    
+      - name: Get Info Project Name
+        id: stack-info
+        env:
+          WORKDIR_STACK: ${{ steps.iac-project-info.outputs.project }}
+        run: |
+          PROJECT_NAME=`cat $WORKDIR_STACK/Pulumi.yaml |  grep -m1 name: | awk '{print $2}'`
+          echo "::set-output name=project::$(echo $PROJECT_NAME)"
+
+      - name: Slack Notification
+        if: ${{ success() || failure() }}
+        run: |
+          echo "slack notification"
