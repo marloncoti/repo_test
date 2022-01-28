@@ -27,8 +27,8 @@ jobs:
     
   deploy-infra:
     name: deploy-infra
-    needs: get-pr-details
-    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '[deploy-infra]') }}
+    needs: pull-request-info
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-python@v2
