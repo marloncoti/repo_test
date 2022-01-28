@@ -9,22 +9,22 @@ env:
 
 jobs:
   pull-request-info:
-  if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '[deploy-infra]') }}
-  runs-on: ubuntu-latest
-  outputs:
-    branch_name: ${{ fromJson(steps.get_pull_request_url.outputs.data).head.ref }} # pull request data 
-    number: ${{ fromJson(steps.get_pull_request_url.outputs.data).number }}
-    mergeable_state: ${{ fromJson(steps.get_pull_request_url.outputs.data).mergeable_state }}
+    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '[deploy-infra]') }}
+    runs-on: ubuntu-latest
+    outputs:
+      branch_name: ${{ fromJson(steps.get_pull_request_url.outputs.data).head.ref }} # pull request data 
+      number: ${{ fromJson(steps.get_pull_request_url.outputs.data).number }}
+      mergeable_state: ${{ fromJson(steps.get_pull_request_url.outputs.data).mergeable_state }}
   
-  steps:
-    - name: Get PR URL from Comment
-      uses: octokit/request-action@v2.x
-      id: get_pull_request_url
-      with:
-        route: GET ${{ github.event.issue.pull_request.url }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
-  
+    steps:
+      - name: Get PR URL from Comment
+        uses: octokit/request-action@v2.x
+        id: get_pull_request_url
+        with:
+          route: GET ${{ github.event.issue.pull_request.url }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
+    
   deploy-infra:
     name: deploy-infra
     needs: get-pr-details
