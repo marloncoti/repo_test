@@ -29,7 +29,6 @@ jobs:
   deploy-infra:
     name: Deploy Infrastructre
     needs: pull-request-info
-
     if: needs.pull-request-info.outputs.mergeable_state  == 'clean'
     runs-on: ubuntu-latest
     steps:
