@@ -9,6 +9,7 @@ env:
 
 jobs:
   pull-request-info:
+    name: Get Pull Request Info
     if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '[deploy-infra]') }}
     runs-on: ubuntu-latest
     outputs:
@@ -26,9 +27,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
     
   deploy-infra:
-    name: deploy-infra
+    name: Deploy Infrastructre
     needs: pull-request-info
 
+    if: needs.pull-request-info.outputs.mergeable_state  == 'clean'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-python@v2
