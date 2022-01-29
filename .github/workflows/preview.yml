@@ -6,6 +6,7 @@ on:
 
 jobs:
   event-details:
+    if: ${{ startsWith(github.event.pull_request.head.ref, 'qa') || startsWith(github.event.pull_request.head.ref, 'stg') || startsWith(github.event.pull_request.head.ref, 'prd')  }}
     runs-on: ubuntu-latest
     steps:
       - env:
