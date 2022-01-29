@@ -29,7 +29,7 @@ jobs:
   deploy-infra:
     name: Deploy Infrastructre
     needs: pull-request-info
-    if: ${{ needs.pull-request-info.outputs.mergeable_state == 'clean' && startsWith(needs.pull-request-info.outputs.branch_name, 'qa') }}
+    if: ${{ needs.pull-request-info.outputs.mergeable_state == 'clean' && ( startsWith(needs.pull-request-info.outputs.branch_name, 'qa') || startsWith(needs.pull-request-info.outputs.branch_name, 'stg') || startsWith(needs.pull-request-info.outputs.branch_name, 'prd') ) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-python@v2
